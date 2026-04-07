@@ -1,0 +1,14 @@
+D:\Curso\SD\Projeto\SensorNode\GatewayNode\obj\Debug\net8.0\GatewayNode.GeneratedMSBuildEditorConfig.editorconfig
+D:\Curso\SD\Projeto\SensorNode\GatewayNode\obj\Debug\net8.0\GatewayNode.AssemblyInfoInputs.cache
+D:\Curso\SD\Projeto\SensorNode\GatewayNode\obj\Debug\net8.0\GatewayNode.AssemblyInfo.cs
+D:\Curso\SD\Projeto\SensorNode\GatewayNode\obj\Debug\net8.0\GatewayNode.csproj.CoreCompileInputs.cache
+D:\Curso\SD\Projeto\SensorNode\GatewayNode\bin\Debug\net8.0\GatewayNode.exe
+D:\Curso\SD\Projeto\SensorNode\GatewayNode\bin\Debug\net8.0\GatewayNode.deps.json
+D:\Curso\SD\Projeto\SensorNode\GatewayNode\bin\Debug\net8.0\GatewayNode.runtimeconfig.json
+D:\Curso\SD\Projeto\SensorNode\GatewayNode\bin\Debug\net8.0\GatewayNode.dll
+D:\Curso\SD\Projeto\SensorNode\GatewayNode\bin\Debug\net8.0\GatewayNode.pdb
+D:\Curso\SD\Projeto\SensorNode\GatewayNode\obj\Debug\net8.0\GatewayNode.dll
+D:\Curso\SD\Projeto\SensorNode\GatewayNode\obj\Debug\net8.0\refint\GatewayNode.dll
+D:\Curso\SD\Projeto\SensorNode\GatewayNode\obj\Debug\net8.0\GatewayNode.pdb
+D:\Curso\SD\Projeto\SensorNode\GatewayNode\obj\Debug\net8.0\GatewayNode.genruntimeconfig.cache
+D:\Curso\SD\Projeto\SensorNode\GatewayNode\obj\Debug\net8.0\ref\GatewayNode.dll

@@ -1,0 +1,14 @@
+D:\Curso\SD\Projeto\SensorNode\SensorNode\obj\Debug\net8.0\SensorNode.GeneratedMSBuildEditorConfig.editorconfig
+D:\Curso\SD\Projeto\SensorNode\SensorNode\obj\Debug\net8.0\SensorNode.AssemblyInfoInputs.cache
+D:\Curso\SD\Projeto\SensorNode\SensorNode\obj\Debug\net8.0\SensorNode.AssemblyInfo.cs
+D:\Curso\SD\Projeto\SensorNode\SensorNode\obj\Debug\net8.0\SensorNode.csproj.CoreCompileInputs.cache
+D:\Curso\SD\Projeto\SensorNode\SensorNode\bin\Debug\net8.0\SensorNode.exe
+D:\Curso\SD\Projeto\SensorNode\SensorNode\bin\Debug\net8.0\SensorNode.deps.json
+D:\Curso\SD\Projeto\SensorNode\SensorNode\bin\Debug\net8.0\SensorNode.runtimeconfig.json
+D:\Curso\SD\Projeto\SensorNode\SensorNode\bin\Debug\net8.0\SensorNode.dll
+D:\Curso\SD\Projeto\SensorNode\SensorNode\bin\Debug\net8.0\SensorNode.pdb
+D:\Curso\SD\Projeto\SensorNode\SensorNode\obj\Debug\net8.0\SensorNode.dll
+D:\Curso\SD\Projeto\SensorNode\SensorNode\obj\Debug\net8.0\refint\SensorNode.dll
+D:\Curso\SD\Projeto\SensorNode\SensorNode\obj\Debug\net8.0\SensorNode.pdb
+D:\Curso\SD\Projeto\SensorNode\SensorNode\obj\Debug\net8.0\SensorNode.genruntimeconfig.cache
+D:\Curso\SD\Projeto\SensorNode\SensorNode\obj\Debug\net8.0\ref\SensorNode.dll

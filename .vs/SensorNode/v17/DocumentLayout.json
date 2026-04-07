@@ -1,0 +1,71 @@
+{
+  "Version": 1,
+  "WorkspaceRootPath": "D:\\Curso\\SD\\Projeto\\SensorNode\\",
+  "Documents": [
+    {
+      "AbsoluteMoniker": "D:0:0:{D4A128EA-E890-4634-907E-041F18CEE37C}|SensorNode\\SensorNode.csproj|d:\\curso\\sd\\projeto\\sensornode\\sensornode\\program.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{D4A128EA-E890-4634-907E-041F18CEE37C}|SensorNode\\SensorNode.csproj|solutionrelative:sensornode\\program.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{FDE23198-2077-4BF2-B0E7-85FECB6DBE4A}|ServerNode\\ServerNode.csproj|d:\\curso\\sd\\projeto\\sensornode\\servernode\\program.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{FDE23198-2077-4BF2-B0E7-85FECB6DBE4A}|ServerNode\\ServerNode.csproj|solutionrelative:servernode\\program.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{491178F3-34DE-4F2E-B5EC-CA43A9CA7080}|GatewayNode\\GatewayNode.csproj|d:\\curso\\sd\\projeto\\sensornode\\gatewaynode\\program.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{491178F3-34DE-4F2E-B5EC-CA43A9CA7080}|GatewayNode\\GatewayNode.csproj|solutionrelative:gatewaynode\\program.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    }
+  ],
+  "DocumentGroupContainers": [
+    {
+      "Orientation": 0,
+      "VerticalTabListWidth": 256,
+      "DocumentGroups": [
+        {
+          "DockedWidth": 200,
+          "SelectedChildIndex": 2,
+          "Children": [
+            {
+              "$type": "Document",
+              "DocumentIndex": 1,
+              "Title": "Program.cs",
+              "DocumentMoniker": "D:\\Curso\\SD\\Projeto\\SensorNode\\ServerNode\\Program.cs",
+              "RelativeDocumentMoniker": "ServerNode\\Program.cs",
+              "ToolTip": "D:\\Curso\\SD\\Projeto\\SensorNode\\ServerNode\\Program.cs",
+              "RelativeToolTip": "ServerNode\\Program.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAABsAAAABAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-04-06T15:23:00.54Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 2,
+              "Title": "Program.cs",
+              "DocumentMoniker": "D:\\Curso\\SD\\Projeto\\SensorNode\\GatewayNode\\Program.cs",
+              "RelativeDocumentMoniker": "GatewayNode\\Program.cs",
+              "ToolTip": "D:\\Curso\\SD\\Projeto\\SensorNode\\GatewayNode\\Program.cs",
+              "RelativeToolTip": "GatewayNode\\Program.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAACwAAAABAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-04-06T15:22:42.167Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 0,
+              "Title": "Program.cs",
+              "DocumentMoniker": "D:\\Curso\\SD\\Projeto\\SensorNode\\SensorNode\\Program.cs",
+              "RelativeDocumentMoniker": "SensorNode\\Program.cs",
+              "ToolTip": "D:\\Curso\\SD\\Projeto\\SensorNode\\SensorNode\\Program.cs",
+              "RelativeToolTip": "SensorNode\\Program.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAACYAAAABAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-04-06T15:19:49.323Z",
+              "EditorCaption": ""
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

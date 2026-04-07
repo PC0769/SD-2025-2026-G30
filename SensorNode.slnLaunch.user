@@ -1,0 +1,19 @@
+[
+  {
+    "Name": "Novo Perfil",
+    "Projects": [
+      {
+        "Path": "SensorNode\\SensorNode.csproj",
+        "Action": "Start"
+      },
+      {
+        "Path": "GatewayNode\\GatewayNode.csproj",
+        "Action": "Start"
+      },
+      {
+        "Path": "ServerNode\\ServerNode.csproj",
+        "Action": "Start"
+      }
+    ]
+  }
+]
