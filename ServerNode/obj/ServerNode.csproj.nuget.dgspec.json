@@ -1,23 +1,23 @@
 {
   "format": 1,
   "restore": {
-    "D:\\Curso\\SD\\Projeto\\SensorNode\\ServerNode\\ServerNode.csproj": {}
+    "C:\\Users\\al73561\\Desktop\\SensorNode\\SensorNode\\ServerNode\\ServerNode.csproj": {}
   },
   "projects": {
-    "D:\\Curso\\SD\\Projeto\\SensorNode\\ServerNode\\ServerNode.csproj": {
+    "C:\\Users\\al73561\\Desktop\\SensorNode\\SensorNode\\ServerNode\\ServerNode.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "D:\\Curso\\SD\\Projeto\\SensorNode\\ServerNode\\ServerNode.csproj",
+        "projectUniqueName": "C:\\Users\\al73561\\Desktop\\SensorNode\\SensorNode\\ServerNode\\ServerNode.csproj",
         "projectName": "ServerNode",
-        "projectPath": "D:\\Curso\\SD\\Projeto\\SensorNode\\ServerNode\\ServerNode.csproj",
-        "packagesPath": "C:\\Users\\pedro\\.nuget\\packages\\",
-        "outputPath": "D:\\Curso\\SD\\Projeto\\SensorNode\\ServerNode\\obj\\",
+        "projectPath": "C:\\Users\\al73561\\Desktop\\SensorNode\\SensorNode\\ServerNode\\ServerNode.csproj",
+        "packagesPath": "C:\\Users\\al73561\\.nuget\\packages\\",
+        "outputPath": "C:\\Users\\al73561\\Desktop\\SensorNode\\SensorNode\\ServerNode\\obj\\",
         "projectStyle": "PackageReference",
         "fallbackFolders": [
           "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages"
         ],
         "configFilePaths": [
-          "C:\\Users\\pedro\\AppData\\Roaming\\NuGet\\NuGet.Config",
+          "C:\\Users\\al73561\\AppData\\Roaming\\NuGet\\NuGet.Config",
           "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.FallbackLocation.config",
           "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.Offline.config"
         ],
@@ -65,7 +65,7 @@
               "privateAssets": "all"
             }
           },
-          "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\9.0.308/PortableRuntimeIdentifierGraph.json"
+          "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\9.0.307/PortableRuntimeIdentifierGraph.json"
         }
       }
     }
