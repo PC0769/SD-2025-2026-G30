@@ -18,10 +18,10 @@ O projeto já está estruturado como um sistema distribuído com **3 agentes/pro
 - Formato de mensagem no sensor:
 	- `DATA|ID|TIPO|VALOR|TIMESTAMP`
 
-### Nota de correção de enquadramento
+### Nota de enquadramento
 
-A leitura que fizeste está correta no essencial: há uma máquina que regista/envia, um gateway e um servidor.
-Neste estado, o "registo" final ainda é em **consola** no servidor (não há base de dados nem ficheiro persistente).
+A arquitetura está correta no essencial: existe um nó de aquisição/envio, um gateway de encaminhamento e um servidor central.
+No estado atual, o "registo" final é feito em **consola** no servidor (ainda sem persistência em base de dados ou ficheiro).
 
 ## Ficheiros core
 
@@ -71,6 +71,6 @@ Neste estado, o "registo" final ainda é em **consola** no servidor (não há ba
 2. Iniciar `GatewayNode`.
 3. Iniciar `SensorNode` e enviar medições.
 
-Se os três estiverem ativos, deves ver:
-- no gateway: receção do sensor e encaminhamento;
+Quando os três processos estão ativos, deve observar-se:
+- no gateway: receção das mensagens do sensor e respetivo encaminhamento;
 - no servidor: receção final para "armazenamento" em consola.
