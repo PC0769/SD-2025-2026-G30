@@ -1,0 +1,20 @@
+# Build outputs
+**/bin/
+**/obj/
+
+# Visual Studio local settings
+.vs/
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+*.slnLaunch.user
+
+# Rider / VS Code workspace settings (optional local)
+.idea/
+.vscode/
+
+# Logs and temp files
+*.log
+*.tmp
+*.temp
