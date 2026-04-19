@@ -27,6 +27,26 @@ No estado atual, o registo final ainda é feito em consola no servidor, sem pers
 2. Servidor em 6000
 - Formato de mensagem usado no sensor:
 DATA|ID|TIPO|VALOR|TIMESTAMP
+- Respostas de controlo:
+ACK|ORIGEM|TIPO_MENSAGEM
+NACK|ORIGEM|MOTIVO
+
+## Configuracao do Gateway
+
+O ficheiro GatewayNode/config.csv esta em formato CSV com delimitador ';' e cabecalho:
+
+sensor_id;estado;zona;tipos_dados;last_sync
+
+## Protocolo formal
+
+O protocolo formal encontra-se documentado em PROTOCOLO.md.
+
+Conjunto de mensagens obrigatorias definido:
+
+- START|sensor_id|timestamp
+- DATA|sensor_id|tipo|valor|timestamp
+- HB|sensor_id|timestamp
+- END|sensor_id|motivo|timestamp
 
 ## Ficheiros principais do projeto
 
@@ -79,22 +99,3 @@ Com os três processos ativos, observa-se:
 - Encaminhamento de dados do GATEWAY para o SERVIDOR.
 - Receção de dados no SERVIDOR.
 
-## Tarefas futuras (com base no protocolo)
-
-- Definir e documentar formalmente o protocolo SENSOR/GATEWAY/SERVIDOR com mensagens e estados.
-- Incluir mensagens explícitas de início e finalização de comunicação.
-- Implementar identificação inicial do SENSOR por ID durante handshake.
-- Implementar registo explícito dos tipos de dados ativos por SENSOR.
-- Implementar heartbeat periódico do SENSOR.
-- Implementar deteção de indisponibilidade por ausência de heartbeat.
-- Implementar pedido de criação de stream de vídeo no protocolo.
-- Criar e usar ficheiros CSV no GATEWAY para sensor_id, estado, zona, tipos_dados e last_sync.
-- Validar no GATEWAY se o sensor está registado e com estado válido.
-- Validar se o tipo de dado enviado é suportado.
-- Atualizar estado e campo last_sync no GATEWAY.
-- Registar dados recebidos no GATEWAY.
-- Garantir atendimento concorrente no GATEWAY com threads e mutexes.
-- Garantir atendimento concorrente no SERVIDOR com threads e mutexes.
-- Armazenar dados por tipo em ficheiros distintos no SERVIDOR.
-- Considerar persistência em base de dados relacional como funcionalidade extra.
-- Preparar relatório final (até 3 páginas, excluindo anexos) com decisões de implementação e protocolo.
