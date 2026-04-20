@@ -5,17 +5,21 @@ using System.Text;
 
 Console.WriteLine("--- SERVIDOR CENTRAL ---");
 
+// Porta de escuta e formatos aceites para timestamps do protocolo.
 const int ServerPort = 6000;
 string[] timestampFormats = { "yyyy-MM-ddTHH:mm:ss", "o" };
 
+// Locks para escrita em ficheiros e gestao de estado de sessao concorrente.
 object serverFileLock = new object();
 object sessionLock = new object();
 var estadosSessao = new Dictionary<string, SessionState>(StringComparer.OrdinalIgnoreCase);
 
+// Inicializa listener TCP para receber dados do gateway.
 TcpListener serverListener = new TcpListener(IPAddress.Any, ServerPort);
 serverListener.Start();
 Console.WriteLine("Aguardando dados na porta 6000...");
 
+// Loop principal de aceites e despacho de ligacoes para tarefas dedicadas.
 while (true)
 {
     try
@@ -29,6 +33,7 @@ while (true)
     }
 }
 
+// Processa uma ligacao recebida, valida o protocolo e devolve ACK/NACK.
 void ProcessarLigacaoCliente(TcpClient client)
 {
     using (client)
@@ -71,6 +76,7 @@ void ProcessarLigacaoCliente(TcpClient client)
     }
 }
 
+// Aplica logica de negocio por tipo de mensagem e persiste registos.
 string ProcessarMensagemValida(ProtocoloMensagem pacote)
 {
     if (pacote.TipoMensagem == "START")
@@ -120,6 +126,7 @@ string ProcessarMensagemValida(ProtocoloMensagem pacote)
     return "ACK|SERVER|END";
 }
 
+// Identifica tipos que exigem validacao de transicao de sessao.
 bool ExigeSessaoAtiva(string tipoMensagem)
 {
     return tipoMensagem == "START"
@@ -128,6 +135,7 @@ bool ExigeSessaoAtiva(string tipoMensagem)
         || tipoMensagem == "END";
 }
 
+// Impoe ordem correta das mensagens de sessao por sensor.
 bool TryValidarTransicaoSessao(ProtocoloMensagem pacote, out string erro)
 {
     erro = string.Empty;
@@ -163,6 +171,7 @@ bool TryValidarTransicaoSessao(ProtocoloMensagem pacote, out string erro)
     return true;
 }
 
+// Atualiza estado da sessao e carimbos de atividade/heartbeat.
 void AtualizarEstadoSessao(ProtocoloMensagem pacote, SessionPhase faseDestino)
 {
     lock (sessionLock)
@@ -183,6 +192,7 @@ void AtualizarEstadoSessao(ProtocoloMensagem pacote, SessionPhase faseDestino)
     }
 }
 
+// Acrescenta uma linha a ficheiro de saida com sincronizacao por lock.
 void AppendServidorFicheiro(string nomeFicheiro, string linha)
 {
     lock (serverFileLock)
@@ -191,6 +201,7 @@ void AppendServidorFicheiro(string nomeFicheiro, string linha)
     }
 }
 
+// Faz parse e validacao sintatica/semantica basica da mensagem do protocolo.
 bool TryParseMensagem(string mensagem, out ProtocoloMensagem pacote, out string erro)
 {
     pacote = default;
@@ -310,11 +321,13 @@ bool TryParseMensagem(string mensagem, out ProtocoloMensagem pacote, out string 
     return false;
 }
 
+// Validacao minima de identificador de sensor.
 bool IsSensorIdValido(string sensorId)
 {
     return !string.IsNullOrWhiteSpace(sensorId);
 }
 
+// Valida timestamps nos formatos suportados pelo protocolo.
 bool IsTimestampValido(string timestamp)
 {
     return DateTime.TryParseExact(
@@ -325,6 +338,7 @@ bool IsTimestampValido(string timestamp)
         out _);
 }
 
+// Valida o valor numerico e os limites esperados por tipo de dado.
 bool IsValorValidoPorTipo(string tipo, string valor, out string erro)
 {
     erro = string.Empty;
@@ -361,12 +375,14 @@ bool IsValorValidoPorTipo(string tipo, string valor, out string erro)
     return true;
 }
 
+// Envia resposta textual no stream TCP de volta ao gateway.
 void EnviarResposta(NetworkStream stream, string resposta)
 {
     byte[] dados = Encoding.ASCII.GetBytes(resposta);
     stream.Write(dados, 0, dados.Length);
 }
 
+// Estrutura de dados para mensagens parseadas no servidor.
 readonly record struct ProtocoloMensagem(
     string TipoMensagem,
     string SensorId,
@@ -381,6 +397,7 @@ readonly record struct ProtocoloMensagem(
     string? JanelaInicio,
     string? JanelaFim);
 
+// Estado em memoria de sessao por sensor no servidor.
 sealed class SessionState
 {
     public SessionPhase Fase { get; set; } = SessionPhase.Idle;
@@ -388,6 +405,7 @@ sealed class SessionState
     public DateTime LastHeartbeatUtc { get; set; } = DateTime.UtcNow;
 }
 
+// Fases de sessao aceites pelo servidor.
 enum SessionPhase
 {
     Idle,

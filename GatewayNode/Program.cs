@@ -5,33 +5,41 @@ using System.Text;
 
 Console.WriteLine("--- GATEWAY ONE HEALTH ---");
 
+// Portas e regras operacionais do gateway.
 const int GatewayPort = 5000;
 const int ServerPort = 6000;
 const int AggregationMinSamples = 3;
 
+// Parametros de tempo para agregacao e timeout de heartbeat.
 TimeSpan aggregationWindow = TimeSpan.FromSeconds(60);
 TimeSpan heartbeatTimeout = TimeSpan.FromSeconds(90);
 string[] timestampFormats = { "yyyy-MM-ddTHH:mm:ss", "o" };
 
+// Caminhos de persistencia local do gateway.
 string pastaGatewayDados = ObterPastaGatewayDados();
 string ficheiroRawGateway = Path.Combine(pastaGatewayDados, "gateway_raw_data.txt");
 string ficheiroAgregadoGateway = Path.Combine(pastaGatewayDados, "gateway_aggregated_data.txt");
 string ficheiroSessoesGateway = Path.Combine(pastaGatewayDados, "gateway_sessions.txt");
 
+// Locks para proteger acesso concorrente a ficheiros e estruturas partilhadas.
 object configLock = new object();
 object gatewayFileLock = new object();
 object aggregationLock = new object();
 object sessionLock = new object();
 
+// Estado em memoria das sessoes e buckets de agregacao.
 var estadosSessao = new Dictionary<string, SensorSessionState>(StringComparer.OrdinalIgnoreCase);
 var bucketsAgregacao = new Dictionary<string, AggregateBucket>(StringComparer.OrdinalIgnoreCase);
 
+// Inicializa listener TCP para receber mensagens dos sensores.
 TcpListener listener = new TcpListener(IPAddress.Any, GatewayPort);
 listener.Start();
 Console.WriteLine("A escuta no Porto 5000...");
 
+// Monitor de timeout de heartbeat e expiracao de janelas de agregacao.
 _ = Task.Run(MonitorizarEstadoGatewayAsync);
 
+// Loop principal para aceitar ligacoes dos sensores.
 while (true)
 {
     try
@@ -45,6 +53,7 @@ while (true)
     }
 }
 
+// Processa uma ligacao TCP individual do sensor e devolve ACK/NACK.
 void ProcessarLigacaoSensor(TcpClient sensorClient)
 {
     using (sensorClient)
@@ -82,6 +91,7 @@ void ProcessarLigacaoSensor(TcpClient sensorClient)
     }
 }
 
+// Valida e trata mensagens de sessao (START/HB/END), com encaminhamento para o servidor.
 string ProcessarMensagemSessao(ProtocoloMensagem pacote, string mensagemOriginal)
 {
     if (!ValidarSensorAtivo(pacote.SensorId))
@@ -109,6 +119,7 @@ string ProcessarMensagemSessao(ProtocoloMensagem pacote, string mensagemOriginal
     return "NACK|SERVER|" + respostaServidor;
 }
 
+// Valida, normaliza e encaminha dados brutos; gera agregados quando aplicavel.
 string ProcessarMensagemData(ProtocoloMensagem pacote)
 {
     if (!ValidarSensorAtivoETipo(pacote.SensorId, pacote.TipoDado!))
@@ -166,6 +177,7 @@ string ProcessarMensagemData(ProtocoloMensagem pacote)
     return "ACK|GATEWAY|DATA";
 }
 
+// Garante que a sequencia de mensagens respeita o estado atual da sessao.
 bool TryValidarTransicaoSessao(ProtocoloMensagem pacote, out string erro)
 {
     erro = string.Empty;
@@ -201,6 +213,7 @@ bool TryValidarTransicaoSessao(ProtocoloMensagem pacote, out string erro)
     return true;
 }
 
+// Atualiza o estado da sessao e metadados de atividade/heartbeat.
 void AtualizarEstadoSessao(ProtocoloMensagem pacote, DateTime agoraUtc)
 {
     lock (sessionLock)
@@ -226,6 +239,7 @@ void AtualizarEstadoSessao(ProtocoloMensagem pacote, DateTime agoraUtc)
     }
 }
 
+// Devolve estado de sessao existente ou cria um novo para o sensor.
 SensorSessionState ObterOuCriarEstadoSessao(string sensorId)
 {
     if (!estadosSessao.TryGetValue(sensorId, out SensorSessionState? estado))
@@ -237,6 +251,7 @@ SensorSessionState ObterOuCriarEstadoSessao(string sensorId)
     return estado;
 }
 
+// Tarefa periodica para fechar sessoes por timeout e descarregar agregados expirados.
 async Task MonitorizarEstadoGatewayAsync()
 {
     while (true)
@@ -293,6 +308,7 @@ async Task MonitorizarEstadoGatewayAsync()
     }
 }
 
+// Acumula leituras por sensor/tipo e emite agregado por contagem minima ou janela temporal.
 bool AdicionarLeituraParaAgregacao(string sensorId, string tipo, double valor, DateTime timestampUtc, out AggregateRecord? agregadoGerado)
 {
     agregadoGerado = null;
@@ -352,6 +368,7 @@ bool AdicionarLeituraParaAgregacao(string sensorId, string tipo, double valor, D
     }
 }
 
+// Extrai e remove agregados cuja janela expirou sem novas leituras.
 List<AggregateRecord> ExtrairAgregadosExpirados(DateTime agoraUtc)
 {
     var agregados = new List<AggregateRecord>();
@@ -377,6 +394,7 @@ List<AggregateRecord> ExtrairAgregadosExpirados(DateTime agoraUtc)
     return agregados;
 }
 
+// Materializa um registo agregado a partir do bucket acumulado.
 AggregateRecord CriarAgregado(AggregateBucket bucket, DateTime janelaFimUtc)
 {
     return new AggregateRecord
@@ -392,6 +410,7 @@ AggregateRecord CriarAgregado(AggregateBucket bucket, DateTime janelaFimUtc)
     };
 }
 
+// Converte o agregado para o formato de protocolo AGGDATA.
 string MontarMensagemAgregada(AggregateRecord agregado)
 {
     return "AGGDATA|"
@@ -405,6 +424,7 @@ string MontarMensagemAgregada(AggregateRecord agregado)
         + agregado.JanelaFimUtc.ToString("yyyy-MM-ddTHH:mm:ss");
 }
 
+// Persiste dados brutos normalizados recebidos no gateway.
 void RegistarRawGateway(ProtocoloMensagem pacote, double valorNormalizado)
 {
     string linha = pacote.Timestamp + ";" + pacote.SensorId + ";" + pacote.TipoDado + ";" + valorNormalizado.ToString("0.00", CultureInfo.InvariantCulture);
@@ -414,6 +434,7 @@ void RegistarRawGateway(ProtocoloMensagem pacote, double valorNormalizado)
     }
 }
 
+// Persiste os dados agregados produzidos localmente.
 void RegistarAgregadoGateway(AggregateRecord agregado)
 {
     string linha = agregado.JanelaFimUtc.ToString("yyyy-MM-ddTHH:mm:ss")
@@ -432,6 +453,7 @@ void RegistarAgregadoGateway(AggregateRecord agregado)
     }
 }
 
+// Persiste eventos de sessao (START/HB/END/timeout) para auditoria.
 void RegistarSessaoGateway(string evento, string sensorId, string timestamp, string? detalhe)
 {
     string linha = timestamp + ";" + sensorId + ";" + evento + ";" + (detalhe ?? string.Empty);
@@ -441,6 +463,7 @@ void RegistarSessaoGateway(string evento, string sensorId, string timestamp, str
     }
 }
 
+// Faz parse e validacao estrutural das mensagens recebidas do sensor.
 bool TryParseMensagem(string mensagem, out ProtocoloMensagem pacote, out string erro)
 {
     pacote = default;
@@ -518,6 +541,7 @@ bool TryParseMensagem(string mensagem, out ProtocoloMensagem pacote, out string 
     return false;
 }
 
+// Valida se o sensor existe no ficheiro de configuracao e esta ativo.
 bool ValidarSensorAtivo(string id)
 {
     if (!TryObterSensorConfig(id, out SensorConfig? sensor) || sensor is null)
@@ -528,6 +552,7 @@ bool ValidarSensorAtivo(string id)
     return string.Equals(sensor.Estado, "ativo", StringComparison.OrdinalIgnoreCase);
 }
 
+// Valida sensor ativo e permissao para o tipo de dado recebido.
 bool ValidarSensorAtivoETipo(string id, string tipo)
 {
     if (!TryObterSensorConfig(id, out SensorConfig? sensor) || sensor is null)
@@ -543,6 +568,7 @@ bool ValidarSensorAtivoETipo(string id, string tipo)
     return sensor.TiposDados.Any(t => string.Equals(t, tipo, StringComparison.OrdinalIgnoreCase));
 }
 
+// Procura a configuracao de um sensor por ID.
 bool TryObterSensorConfig(string id, out SensorConfig? sensor)
 {
     lock (configLock)
@@ -554,6 +580,7 @@ bool TryObterSensorConfig(string id, out SensorConfig? sensor)
     return sensor is not null;
 }
 
+// Atualiza no CSV o timestamp de ultima sincronizacao do sensor.
 void AtualizarLastSync(string id)
 {
     lock (configLock)
@@ -570,6 +597,7 @@ void AtualizarLastSync(string id)
     }
 }
 
+// Carrega e interpreta o ficheiro config.csv para objetos de configuracao.
 List<SensorConfig> CarregarSensoresConfig()
 {
     string path = ObterCaminhoConfig();
@@ -625,6 +653,7 @@ List<SensorConfig> CarregarSensoresConfig()
     return sensores;
 }
 
+// Reescreve o config.csv com o estado mais recente dos sensores.
 void GuardarSensoresConfig(List<SensorConfig> sensores)
 {
     string path = ObterCaminhoConfig();
@@ -639,6 +668,7 @@ void GuardarSensoresConfig(List<SensorConfig> sensores)
     File.WriteAllLines(path, linhas);
 }
 
+// Resolve o caminho de config.csv em diferentes contextos de execucao.
 string ObterCaminhoConfig()
 {
     string cwdDireto = Path.Combine(Directory.GetCurrentDirectory(), "config.csv");
@@ -662,6 +692,7 @@ string ObterCaminhoConfig()
     return cwdGateway;
 }
 
+// Resolve pasta destino para os ficheiros de dados do gateway.
 string ObterPastaGatewayDados()
 {
     string pastaGatewayNoCwd = Path.Combine(Directory.GetCurrentDirectory(), "GatewayNode");
@@ -673,6 +704,7 @@ string ObterPastaGatewayDados()
     return Directory.GetCurrentDirectory();
 }
 
+// Interpreta a lista de tipos de dados permitidos no campo do CSV.
 IEnumerable<string> ParseListaTipos(string? campoTipos)
 {
     if (string.IsNullOrWhiteSpace(campoTipos))
@@ -691,11 +723,13 @@ IEnumerable<string> ParseListaTipos(string? campoTipos)
         .Select(t => t.Trim());
 }
 
+// Validacao minima de identificador de sensor.
 bool IsSensorIdValido(string sensorId)
 {
     return !string.IsNullOrWhiteSpace(sensorId);
 }
 
+// Valida timestamp segundo os formatos aceites no protocolo.
 bool IsTimestampValido(string timestamp)
 {
     return DateTime.TryParseExact(
@@ -706,6 +740,7 @@ bool IsTimestampValido(string timestamp)
         out _);
 }
 
+// Converte timestamp textual para UTC; usa agora UTC como fallback seguro.
 DateTime ParseTimestampUtc(string timestamp)
 {
     if (DateTime.TryParseExact(
@@ -721,6 +756,7 @@ DateTime ParseTimestampUtc(string timestamp)
     return DateTime.UtcNow;
 }
 
+// Valida valor numerico e intervalo esperado por tipo de medicao.
 bool IsValorValidoPorTipo(string tipo, string valor, out string erro)
 {
     erro = string.Empty;
@@ -757,6 +793,7 @@ bool IsValorValidoPorTipo(string tipo, string valor, out string erro)
     return true;
 }
 
+// Aplica validacao e normalizacao numerica antes de persistir/encaminhar.
 bool TryPreprocessarValor(string tipo, string valorOriginal, out double valorNormalizado, out string erro)
 {
     valorNormalizado = 0;
@@ -778,6 +815,7 @@ bool TryPreprocessarValor(string tipo, string valorOriginal, out double valorNor
     return true;
 }
 
+// Encaminha para o servidor e exige ACK de protocolo para sucesso.
 bool TryEncaminharComAck(string mensagem, out string respostaServidor)
 {
     (bool sucesso, string resposta) = EncaminharParaServidor(mensagem);
@@ -786,6 +824,7 @@ bool TryEncaminharComAck(string mensagem, out string respostaServidor)
     return sucesso && resposta.StartsWith("ACK|", StringComparison.OrdinalIgnoreCase);
 }
 
+// Envia mensagem ao servidor central e devolve resultado de transporte + resposta.
 (bool Sucesso, string RespostaServidor) EncaminharParaServidor(string msg)
 {
     try
@@ -814,12 +853,14 @@ bool TryEncaminharComAck(string mensagem, out string respostaServidor)
     }
 }
 
+// Escreve uma resposta textual no stream TCP do sensor.
 void EnviarResposta(NetworkStream stream, string resposta)
 {
     byte[] dados = Encoding.ASCII.GetBytes(resposta);
     stream.Write(dados, 0, dados.Length);
 }
 
+// Contrato interno para dados de mensagem ja validados e parseados.
 readonly record struct ProtocoloMensagem(
     string TipoMensagem,
     string SensorId,
@@ -828,6 +869,7 @@ readonly record struct ProtocoloMensagem(
     string? Motivo,
     string Timestamp);
 
+// Modelo de configuracao de sensor carregado do config.csv.
 sealed class SensorConfig
 {
     public string SensorId { get; set; } = string.Empty;
@@ -837,6 +879,7 @@ sealed class SensorConfig
     public string LastSync { get; set; } = string.Empty;
 }
 
+// Estado de sessao mantido em memoria para cada sensor.
 sealed class SensorSessionState
 {
     public SessionPhase Fase { get; set; } = SessionPhase.Idle;
@@ -846,6 +889,7 @@ sealed class SensorSessionState
     public string LastEndTimestamp { get; set; } = string.Empty;
 }
 
+// Acumulador temporario para agregacao por janela de tempo/contagem.
 sealed class AggregateBucket
 {
     public string SensorId { get; set; } = string.Empty;
@@ -858,6 +902,7 @@ sealed class AggregateBucket
     public int Contagem { get; set; }
 }
 
+// Resultado final de uma agregacao pronto para persistencia e envio.
 sealed class AggregateRecord
 {
     public string SensorId { get; set; } = string.Empty;
@@ -870,6 +915,7 @@ sealed class AggregateRecord
     public DateTime JanelaFimUtc { get; set; }
 }
 
+// Fases possiveis de uma sessao de comunicacao do sensor.
 enum SessionPhase
 {
     Idle,
