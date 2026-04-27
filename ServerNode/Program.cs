@@ -1,11 +1,28 @@
+// ============================================================================
+// Ficheiro : ServerNode/Program.cs
+// Modulo   : Servidor Central (Servidor TCP)
+// Porta    : Escuta na porta 6000
+// Descricao: Recebe mensagens encaminhadas pelo Gateway e persiste-as em
+//            ficheiros de texto organizados por tipo (sessao, dados, agregados).
+//            Valida o protocolo, controla transicoes de sessao por sensor e
+//            responde com ACK ou NACK a cada mensagem recebida.
+// Ficheiros de saida:
+//   session_start.txt      - registos de inicio de sessao
+//   session_end.txt        - registos de fim de sessao (inclui motivo)
+//   heartbeats.txt         - heartbeats recebidos
+//   {TIPO}.txt             - dados brutos por tipo (TEMP.txt, RUIDO.txt, ...)
+//   aggregated_{TIPO}.txt  - dados agregados por tipo
+//   protocol_errors.txt    - mensagens rejeitadas por erro de protocolo
+// ============================================================================
 using System.Globalization;
 using System.Net;
 using System.Net.Sockets;
 using System.Text;
 
+// --- Ponto de entrada (top-level statements -> Main implicito) ---
 Console.WriteLine("--- SERVIDOR CENTRAL ---");
 
-// Porta de escuta e formatos aceites para timestamps do protocolo.
+// Porta TCP onde o servidor escuta e formatos aceites para timestamps.
 const int ServerPort = 6000;
 string[] timestampFormats = { "yyyy-MM-ddTHH:mm:ss", "o" };
 
@@ -33,7 +50,13 @@ while (true)
     }
 }
 
-// Processa uma ligacao recebida, valida o protocolo e devolve ACK/NACK.
+/// <summary>
+/// Processa uma ligacao TCP individual recebida do Gateway.
+/// Le a mensagem, valida o protocolo, verifica transicoes de sessao
+/// e devolve a resposta adequada (ACK ou NACK) no mesmo stream.
+/// Executada numa Task dedicada por ligacao.
+/// </summary>
+/// <param name="client">Ligacao TCP aceite pelo listener.</param>
 void ProcessarLigacaoCliente(TcpClient client)
 {
     using (client)
@@ -76,7 +99,13 @@ void ProcessarLigacaoCliente(TcpClient client)
     }
 }
 
-// Aplica logica de negocio por tipo de mensagem e persiste registos.
+/// <summary>
+/// Aplica a logica de negocio para cada tipo de mensagem valida e persiste
+/// o registo no ficheiro adequado. Atualiza o estado da sessao em memoria.
+/// Tipos tratados: START, HB, DATA, AGGDATA, END.
+/// </summary>
+/// <param name="pacote">Mensagem ja parseada e validada.</param>
+/// <returns>Resposta de protocolo, e.g. "ACK|SERVER|DATA".</returns>
 string ProcessarMensagemValida(ProtocoloMensagem pacote)
 {
     if (pacote.TipoMensagem == "START")
@@ -126,7 +155,12 @@ string ProcessarMensagemValida(ProtocoloMensagem pacote)
     return "ACK|SERVER|END";
 }
 
-// Identifica tipos que exigem validacao de transicao de sessao.
+/// <summary>
+/// Indica se o tipo de mensagem exige verificacao do estado da sessao.
+/// AGGDATA nao exige sessao ativa porque e gerado autonomamente pelo Gateway.
+/// </summary>
+/// <param name="tipoMensagem">Tipo da mensagem (START, HB, DATA, END, AGGDATA).</param>
+/// <returns><c>true</c> se a mensagem requer sessao; <c>false</c> caso contrario.</returns>
 bool ExigeSessaoAtiva(string tipoMensagem)
 {
     return tipoMensagem == "START"
@@ -135,7 +169,14 @@ bool ExigeSessaoAtiva(string tipoMensagem)
         || tipoMensagem == "END";
 }
 
-// Impoe ordem correta das mensagens de sessao por sensor.
+/// <summary>
+/// Verifica se a transicao de sessao e valida para o estado atual do sensor.
+/// Impede START duplicado e DATA/HB/END sem sessao aberta.
+/// Acesso protegido por <c>sessionLock</c>.
+/// </summary>
+/// <param name="pacote">Mensagem parseada com SensorId e TipoMensagem.</param>
+/// <param name="erro">Descricao do erro se a transicao for invalida.</param>
+/// <returns><c>true</c> se a transicao e permitida.</returns>
 bool TryValidarTransicaoSessao(ProtocoloMensagem pacote, out string erro)
 {
     erro = string.Empty;
@@ -171,7 +212,12 @@ bool TryValidarTransicaoSessao(ProtocoloMensagem pacote, out string erro)
     return true;
 }
 
-// Atualiza estado da sessao e carimbos de atividade/heartbeat.
+/// <summary>
+/// Atualiza a fase da sessao e os carimbos temporais (atividade e heartbeat)
+/// para o sensor identificado na mensagem. Acesso protegido por <c>sessionLock</c>.
+/// </summary>
+/// <param name="pacote">Mensagem que origina a atualizacao.</param>
+/// <param name="faseDestino">Nova fase pretendida (Active ou Closed).</param>
 void AtualizarEstadoSessao(ProtocoloMensagem pacote, SessionPhase faseDestino)
 {
     lock (sessionLock)
@@ -192,7 +238,13 @@ void AtualizarEstadoSessao(ProtocoloMensagem pacote, SessionPhase faseDestino)
     }
 }
 
-// Acrescenta uma linha a ficheiro de saida com sincronizacao por lock.
+/// <summary>
+/// Acrescenta uma linha a um ficheiro de saida do servidor.
+/// O acesso ao sistema de ficheiros e serializado por <c>serverFileLock</c>
+/// para evitar corrupcao em acessos concorrentes de multiplas tasks.
+/// </summary>
+/// <param name="nomeFicheiro">Nome do ficheiro (e.g. "TEMP.txt").</param>
+/// <param name="linha">Conteudo da linha a adicionar, sem newline.</param>
 void AppendServidorFicheiro(string nomeFicheiro, string linha)
 {
     lock (serverFileLock)
@@ -201,7 +253,15 @@ void AppendServidorFicheiro(string nomeFicheiro, string linha)
     }
 }
 
-// Faz parse e validacao sintatica/semantica basica da mensagem do protocolo.
+/// <summary>
+/// Faz parse e validacao sintatica/semantica da mensagem recebida.
+/// Identifica o tipo (START, HB, DATA, AGGDATA, END), valida o numero de campos
+/// e os formatos de cada campo (sensorId, timestamp, valor numerico, etc.).
+/// </summary>
+/// <param name="mensagem">String bruta recebida via TCP.</param>
+/// <param name="pacote">Estrutura preenchida se o parse for bem-sucedido.</param>
+/// <param name="erro">Descricao do erro se a validacao falhar.</param>
+/// <returns><c>true</c> se a mensagem e valida e foi convertida em <paramref name="pacote"/>.</returns>
 bool TryParseMensagem(string mensagem, out ProtocoloMensagem pacote, out string erro)
 {
     pacote = default;
@@ -321,13 +381,21 @@ bool TryParseMensagem(string mensagem, out ProtocoloMensagem pacote, out string 
     return false;
 }
 
-// Validacao minima de identificador de sensor.
+/// <summary>
+/// Validacao minima do identificador de sensor (nao pode ser vazio ou whitespace).
+/// </summary>
+/// <param name="sensorId">Identificador recebido na mensagem.</param>
+/// <returns><c>true</c> se o ID e nao-vazio.</returns>
 bool IsSensorIdValido(string sensorId)
 {
     return !string.IsNullOrWhiteSpace(sensorId);
 }
 
-// Valida timestamps nos formatos suportados pelo protocolo.
+/// <summary>
+/// Valida se o timestamp segue um dos formatos aceites: "yyyy-MM-ddTHH:mm:ss" ou ISO 8601 "o".
+/// </summary>
+/// <param name="timestamp">Timestamp textual recebido na mensagem.</param>
+/// <returns><c>true</c> se o formato e reconhecido.</returns>
 bool IsTimestampValido(string timestamp)
 {
     return DateTime.TryParseExact(
@@ -338,7 +406,15 @@ bool IsTimestampValido(string timestamp)
         out _);
 }
 
-// Valida o valor numerico e os limites esperados por tipo de dado.
+/// <summary>
+/// Valida se o valor e numerico e se cai dentro dos limites esperados para o tipo.
+/// Limites: TEMP [-50,80], RUIDO [0,200], HUM [0,100], PM2.5/PM10/AR [0,1000].
+/// Tipos desconhecidos sao aceites sem restricao de gama.
+/// </summary>
+/// <param name="tipo">Tipo de medicao (e.g. "TEMP", "RUIDO").</param>
+/// <param name="valor">Valor textual a validar.</param>
+/// <param name="erro">Descricao do erro se a validacao falhar.</param>
+/// <returns><c>true</c> se o valor e numerico e esta dentro dos limites.</returns>
 bool IsValorValidoPorTipo(string tipo, string valor, out string erro)
 {
     erro = string.Empty;
@@ -375,14 +451,22 @@ bool IsValorValidoPorTipo(string tipo, string valor, out string erro)
     return true;
 }
 
-// Envia resposta textual no stream TCP de volta ao gateway.
+/// <summary>
+/// Codifica e envia uma resposta textual ASCII no stream TCP de volta ao Gateway.
+/// </summary>
+/// <param name="stream">Stream da ligacao TCP ativa.</param>
+/// <param name="resposta">Texto da resposta (e.g. "ACK|SERVER|DATA").</param>
 void EnviarResposta(NetworkStream stream, string resposta)
 {
     byte[] dados = Encoding.ASCII.GetBytes(resposta);
     stream.Write(dados, 0, dados.Length);
 }
 
-// Estrutura de dados para mensagens parseadas no servidor.
+/// <summary>
+/// Estrutura imutavel que representa uma mensagem ja parseada e validada.
+/// Contem campos para todos os tipos de mensagem (START, HB, DATA, AGGDATA, END);
+/// campos nao aplicaveis ficam a null.
+/// </summary>
 readonly record struct ProtocoloMensagem(
     string TipoMensagem,
     string SensorId,
@@ -397,7 +481,10 @@ readonly record struct ProtocoloMensagem(
     string? JanelaInicio,
     string? JanelaFim);
 
-// Estado em memoria de sessao por sensor no servidor.
+/// <summary>
+/// Estado de sessao mantido em memoria para cada sensor ligado ao servidor.
+/// Controla a fase atual (Idle/Active/Closed) e os carimbos de atividade.
+/// </summary>
 sealed class SessionState
 {
     public SessionPhase Fase { get; set; } = SessionPhase.Idle;
@@ -405,7 +492,10 @@ sealed class SessionState
     public DateTime LastHeartbeatUtc { get; set; } = DateTime.UtcNow;
 }
 
-// Fases de sessao aceites pelo servidor.
+/// <summary>
+/// Fases possiveis de uma sessao: Idle (ainda nao iniciada),
+/// Active (sessao aberta) e Closed (sessao encerrada).
+/// </summary>
 enum SessionPhase
 {
     Idle,
