@@ -18,9 +18,16 @@ using System.Globalization;
 using System.Net;
 using System.Net.Sockets;
 using System.Text;
+using System.Net.Http;
+using System.Text.Json;
 
 // --- Ponto de entrada (top-level statements -> Main implicito) ---
 Console.WriteLine("--- SERVIDOR CENTRAL ---");
+
+// Cliente HTTP partilhado para chamadas RPC ao AnalysisService.
+// Protocolo TP2 §2.1 — Servidor -> Serviço de Análise e Previsão (porta 7001)
+HttpClient httpClientAnalise = new HttpClient { Timeout = TimeSpan.FromSeconds(5) };
+const string AnalysisServiceUrl = "http://localhost:7001/analyze";
 
 // Porta TCP onde o servidor escuta e formatos aceites para timestamps.
 const int ServerPort = 6000;
@@ -145,6 +152,11 @@ string ProcessarMensagemValida(ProtocoloMensagem pacote)
             + pacote.Contagem + ";" + pacote.JanelaInicio + ";" + pacote.JanelaFim;
         AppendServidorFicheiro("aggregated_" + pacote.TipoDado + ".txt", linha);
         Console.WriteLine("[AGREGACAO]: Gravado agregado de " + pacote.TipoDado + " -> " + linha);
+
+        // [Protocolo TP2 §2.1 — Fase 1.4] Invocar análise RPC em background (fire-and-forget).
+        // Não bloqueia a resposta ao Gateway — a análise é assíncrona.
+        _ = Task.Run(() => ChamarAnaliseAsync(pacote));
+
         return "ACK|SERVER|AGGDATA";
     }
 
@@ -153,6 +165,47 @@ string ProcessarMensagemValida(ProtocoloMensagem pacote)
     AppendServidorFicheiro("session_end.txt", linhaFim);
     Console.WriteLine("[SESSAO]: Fim registado -> " + linhaFim);
     return "ACK|SERVER|END";
+}
+
+/// <summary>
+/// [Protocolo TP2 §2.1 — Fase 1.4] Invoca o AnalysisService via RPC (HTTP POST)
+/// de forma assíncrona após receber um registo AGGDATA do Gateway.
+/// Executado em background — falhas são registadas na consola mas não afetam o fluxo principal.
+/// </summary>
+/// <param name="pacote">Registo AGGDATA já processado e persistido.</param>
+async Task ChamarAnaliseAsync(ProtocoloMensagem pacote)
+{
+    try
+    {
+        var registo = new
+        {
+            media     = pacote.Media,
+            minimo    = pacote.Minimo,
+            maximo    = pacote.Maximo,
+            contagem  = pacote.Contagem,
+            janela_inicio = pacote.JanelaInicio,
+            janela_fim    = pacote.JanelaFim
+        };
+
+        var payload = new
+        {
+            sensor_id = pacote.SensorId,
+            tipo      = pacote.TipoDado,
+            registos  = new[] { registo }
+        };
+
+        string json = JsonSerializer.Serialize(payload);
+        using StringContent conteudo = new StringContent(json, Encoding.UTF8, "application/json");
+
+        HttpResponseMessage resposta = await httpClientAnalise.PostAsync(AnalysisServiceUrl, conteudo);
+        string corpoResposta = await resposta.Content.ReadAsStringAsync();
+
+        Console.WriteLine("[RPC_ANALISE]: Resultado para " + pacote.SensorId + "/" + pacote.TipoDado + " -> " + corpoResposta);
+    }
+    catch (Exception ex)
+    {
+        Console.WriteLine("[RPC_ANALISE][ERRO]: AnalysisService inacessível — " + ex.Message);
+    }
 }
 
 /// <summary>

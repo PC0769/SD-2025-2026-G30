@@ -18,9 +18,17 @@ using System.Globalization;
 using System.Net;
 using System.Net.Sockets;
 using System.Text;
+using System.Net.Http;
+using System.Text.Json;
 
 // --- Ponto de entrada (top-level statements -> Main implicito) ---
 Console.WriteLine("--- GATEWAY ONE HEALTH ---");
+
+// Cliente HTTP partilhado para chamadas RPC ao PreProcessingService.
+// HttpClient deve ser instanciado uma vez e reutilizado (evita socket exhaustion).
+// Protocolo TP2 §2.1 — Gateway -> Serviço de Pré-processamento (porta 7000)
+HttpClient httpClient = new HttpClient { Timeout = TimeSpan.FromSeconds(2) };
+const string PreProcessingServiceUrl = "http://localhost:7000/preprocess";
 
 // Portas TCP e regras operacionais do gateway.
 const int GatewayPort = 5000;
@@ -173,7 +181,7 @@ string ProcessarMensagemData(ProtocoloMensagem pacote)
         return "NACK|SESSION|" + erroSessao;
     }
 
-    if (!TryPreprocessarValor(pacote.TipoDado!, pacote.Valor!, out double valorNormalizado, out string erroPreProcessamento))
+    if (!TryPreprocessarViaRpc(pacote.TipoDado!, pacote.SensorId, pacote.Valor!, pacote.Timestamp, out double valorNormalizado, out string erroPreProcessamento))
     {
         return "NACK|DATA|" + erroPreProcessamento;
     }
@@ -981,8 +989,71 @@ bool IsValorValidoPorTipo(string tipo, string valor, out string erro)
 }
 
 /// <summary>
-/// Valida e normaliza o valor numerico recebido: substitui ',' por '.',
-/// verifica limites por tipo e arredonda a 2 casas decimais.
+/// [Protocolo TP2 §2.1 — Fase 1.2] Invoca o PreProcessingService via RPC (HTTP POST).
+/// Se o serviço estiver indisponível ou responder com erro, aplica a normalização
+/// local como fallback para garantir continuidade (degradação graciosa).
+/// </summary>
+/// <param name="tipo">Tipo de dado (e.g. "TEMP").</param>
+/// <param name="sensorId">Identificador do sensor.</param>
+/// <param name="valorOriginal">Valor textual bruto do sensor.</param>
+/// <param name="timestamp">Timestamp da leitura.</param>
+/// <param name="valorNormalizado">Valor numerico normalizado (saida).</param>
+/// <param name="erro">Descricao do erro se a normalizacao falhar.</param>
+/// <returns><c>true</c> se o valor foi normalizado com sucesso.</returns>
+bool TryPreprocessarViaRpc(string tipo, string sensorId, string valorOriginal, string timestamp, out double valorNormalizado, out string erro)
+{
+    valorNormalizado = 0;
+    erro = string.Empty;
+
+    try
+    {
+        var payload = new
+        {
+            sensor_id = sensorId,
+            tipo      = tipo,
+            valor     = valorOriginal,
+            timestamp = timestamp
+        };
+
+        string json = JsonSerializer.Serialize(payload);
+        using StringContent conteudo = new StringContent(json, Encoding.UTF8, "application/json");
+
+        // Chamada síncrona ao serviço RPC (timeout de 2s definido no HttpClient).
+        HttpResponseMessage resposta = httpClient.PostAsync(PreProcessingServiceUrl, conteudo).GetAwaiter().GetResult();
+        string corpoResposta = resposta.Content.ReadAsStringAsync().GetAwaiter().GetResult();
+
+        using JsonDocument doc = JsonDocument.Parse(corpoResposta);
+        JsonElement root = doc.RootElement;
+
+        if (!resposta.IsSuccessStatusCode)
+        {
+            // Serviço devolveu erro de validação (ex: valor fora de gama) — não usar fallback, rejeitar.
+            erro = root.TryGetProperty("erro", out JsonElement erroEl) ? erroEl.GetString() ?? "Erro RPC" : "Erro RPC";
+            return false;
+        }
+
+        if (root.TryGetProperty("valor", out JsonElement valorEl) && valorEl.ValueKind == JsonValueKind.Number)
+        {
+            valorNormalizado = Math.Round(valorEl.GetDouble(), 2);
+            Console.WriteLine("[RPC]: Pré-processamento via serviço remoto -> " + tipo + "=" + valorNormalizado);
+            return true;
+        }
+
+        erro = "Resposta RPC sem campo 'valor' válido";
+        return false;
+    }
+    catch (Exception ex)
+    {
+        // Fallback local: serviço RPC indisponível — normaliza localmente.
+        Console.WriteLine("[RPC][FALLBACK]: PreProcessingService inacessível (" + ex.Message + "). A usar normalização local.");
+        return TryPreprocessarValor(tipo, valorOriginal, out valorNormalizado, out erro);
+    }
+}
+
+/// <summary>
+/// Normalização local de fallback. Substitui ',' por '.', verifica limites
+/// por tipo e arredonda a 2 casas decimais.
+/// Usada quando o PreProcessingService não está disponível.
 /// </summary>
 /// <param name="tipo">Tipo de dado (e.g. "TEMP").</param>
 /// <param name="valorOriginal">Valor textual bruto do sensor.</param>
