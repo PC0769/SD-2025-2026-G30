@@ -41,8 +41,8 @@ O objetivo central é a **transparência de localização**: o chamador não pre
         │  1. Chama função local (stub)       │
         │──────────────────────────────────► │
         │  2. Stub serializa argumentos       │
-        │     e envia pelo rede               │
-        │                                    │  3. Recebe, desserializa
+        │     e envia pela rede               │
+        │                                    │  3. Recebe e desserializa
         │                                    │  4. Executa função real
         │                                    │  5. Serializa resultado
         │◄────────────────────────────────── │
